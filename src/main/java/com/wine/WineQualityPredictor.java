@@ -10,6 +10,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.spark.sql.functions;
 
 import java.io.FileWriter;
 import java.io.PrintWriter;
@@ -76,6 +77,11 @@ public class WineQualityPredictor {
                 // Convert quality to label (integer)
                 testData = testData.withColumn("label", 
                     testData.col("quality").cast(DataTypes.IntegerType));
+                
+                // Look at test data distribution
+                logAndWrite(writer, "Test Data Class Distribution:");
+                String distributionStr = captureShowOutput(testData.groupBy("label").count().orderBy("label"), 10);
+                logAndWrite(writer, distributionStr);
                     
                 // Load model
                 logAndWrite(writer, "Loading model from: " + modelPath);
@@ -85,12 +91,13 @@ public class WineQualityPredictor {
                 logAndWrite(writer, "Making predictions...");
                 Dataset<Row> predictions = model.transform(testData);
                 
-                // Evaluate model
+                // Evaluate model using multiple metrics
                 MulticlassClassificationEvaluator evaluator = new MulticlassClassificationEvaluator()
                         .setLabelCol("label")
-                        .setPredictionCol("prediction")
-                        .setMetricName("f1");
+                        .setPredictionCol("prediction");
                 
+                // Calculate F1 score (weighted)
+                evaluator.setMetricName("f1");
                 double f1 = evaluator.evaluate(predictions);
                 logAndWrite(writer, "F1 score on test data: " + f1);
                 
@@ -99,12 +106,28 @@ public class WineQualityPredictor {
                 double accuracy = evaluator.evaluate(predictions);
                 logAndWrite(writer, "Accuracy on test data: " + accuracy);
                 
-                // Show predictions (optional, for visual inspection)
-                logAndWrite(writer, "Sample predictions:");
+                // Calculate precision
+                evaluator.setMetricName("weightedPrecision");
+                double precision = evaluator.evaluate(predictions);
+                logAndWrite(writer, "Precision on test data: " + precision);
                 
-                // Capture the output of show() method
-                String predictionSamples = captureShowOutput(predictions.select("quality", "prediction"), 10);
+                // Calculate recall
+                evaluator.setMetricName("weightedRecall");
+                double recall = evaluator.evaluate(predictions);
+                logAndWrite(writer, "Recall on test data: " + recall);
+                
+                // Show sample predictions
+                logAndWrite(writer, "Sample predictions:");
+                String predictionSamples = captureShowOutput(predictions.select("quality", "prediction"), 15);
                 logAndWrite(writer, predictionSamples);
+                
+                // Show confusion matrix
+                logAndWrite(writer, "Confusion Matrix:");
+                String confusionMatrix = captureShowOutput(
+                    predictions.groupBy("label", "prediction").count().orderBy("label", "prediction"), 
+                    50  // Show all possible combinations
+                );
+                logAndWrite(writer, confusionMatrix);
                 
                 // Count correct predictions
                 Dataset<Row> correctPredictions = predictions.filter(
@@ -112,8 +135,27 @@ public class WineQualityPredictor {
                 long correctCount = correctPredictions.count();
                 long totalCount = predictions.count();
                 
-                logAndWrite(writer, "Correct predictions: " + correctCount + " out of " + totalCount + 
-                         " (" + (double)correctCount/totalCount * 100 + "%)");
+                double accuracyPercent = (double)correctCount/totalCount * 100;
+                logAndWrite(writer, String.format("Correct predictions: %d out of %d (%.2f%%)", 
+                    correctCount, totalCount, accuracyPercent));
+                
+                // Check feature importance if available
+                try {
+                    logAndWrite(writer, "Feature Importance Analysis:");
+                    // Try to extract feature importance (works if model contains RandomForestClassificationModel)
+                    String modelString = model.toString();
+                    if (modelString.contains("featureImportances")) {
+                        String[] lines = modelString.split("\n");
+                        for (String line : lines) {
+                            if (line.contains("featureImportances")) {
+                                logAndWrite(writer, line.trim());
+                                break;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    logAndWrite(writer, "Could not extract feature importance: " + e.getMessage());
+                }
                 
                 logAndWrite(writer, "Prediction completed successfully.");
                 
