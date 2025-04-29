@@ -25,6 +25,6 @@ CMD ["spark-submit", \
      "--class", "com.wine.WineQualityPredictor", \
      "--master", "local[*]", \
      "/app/wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar", \
-     "/data/wine-model", \
+     "/data/spark-share/wine-model", \
      "/data/TestDataset.csv"]
      

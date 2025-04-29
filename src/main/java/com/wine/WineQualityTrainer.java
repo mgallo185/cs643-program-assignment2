@@ -3,9 +3,15 @@ package com.wine;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
-import org.apache.spark.ml.classification.LogisticRegression;
+import org.apache.spark.ml.classification.GBTClassifier;
+import org.apache.spark.ml.classification.RandomForestClassifier;
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator;
+import org.apache.spark.ml.feature.StandardScaler;
 import org.apache.spark.ml.feature.VectorAssembler;
+import org.apache.spark.ml.param.ParamMap;
+import org.apache.spark.ml.tuning.CrossValidator;
+import org.apache.spark.ml.tuning.CrossValidatorModel;
+import org.apache.spark.ml.tuning.ParamGridBuilder;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -35,7 +41,6 @@ public class WineQualityTrainer {
         // Create Spark session
         SparkSession spark = SparkSession.builder()
                 .appName("Wine Quality Prediction Training")
-                // Remove the hardcoded master - it will use the one from spark-submit
                 .getOrCreate();
                 
         try {
@@ -74,7 +79,13 @@ public class WineQualityTrainer {
                 trainingData.col("quality").cast(DataTypes.IntegerType));
             validationData = validationData.withColumn("label", 
                 validationData.col("quality").cast(DataTypes.IntegerType));
-                
+            
+            // Print class distribution to understand data imbalance
+            System.out.println("Training Data Class Distribution:");
+            trainingData.groupBy("label").count().orderBy("label").show();
+            System.out.println("Validation Data Class Distribution:");
+            validationData.groupBy("label").count().orderBy("label").show();
+            
             // Define feature columns
             String[] featureCols = {
                 "fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar",
@@ -85,48 +96,89 @@ public class WineQualityTrainer {
             // Create vector assembler
             VectorAssembler assembler = new VectorAssembler()
                     .setInputCols(featureCols)
-                    .setOutputCol("features");
+                    .setOutputCol("assembled_features");
             
-            // Create logistic regression model
-            LogisticRegression lr = new LogisticRegression()
-                    .setMaxIter(10)
-                    .setRegParam(0.3)
-                    .setElasticNetParam(0.8)
-                    .setLabelCol("label")
-                    .setFeaturesCol("features");
+            // Add feature scaling
+            StandardScaler scaler = new StandardScaler()
+                .setInputCol("assembled_features")
+                .setOutputCol("features")
+                .setWithStd(true)
+                .setWithMean(true);
+                
+            // Try Random Forest classifier (better for imbalanced data)
+            RandomForestClassifier rf = new RandomForestClassifier()
+                .setLabelCol("label")
+                .setFeaturesCol("features")
+                .setNumTrees(100)
+                .setMaxDepth(8)
+                .setMaxBins(32)
+                .setSeed(42)
+                .setImpurity("gini");
             
             // Create pipeline
-            Pipeline pipeline = new Pipeline().setStages(new PipelineStage[] {assembler, lr});
+            Pipeline pipeline = new Pipeline().setStages(new PipelineStage[] {assembler, scaler, rf});
             
-            // Train model
-            System.out.println("Training model...");
-            PipelineModel model = pipeline.fit(trainingData);
+            // Create parameter grid for hyperparameter tuning
+            ParamMap[] paramGrid = new ParamGridBuilder()
+                .addGrid(rf.numTrees(), new int[] {50, 100})
+                .addGrid(rf.maxDepth(), new int[] {5, 8, 10})
+                .build();
+                
+            // Define evaluator
+            MulticlassClassificationEvaluator evaluator = new MulticlassClassificationEvaluator()
+                .setLabelCol("label")
+                .setPredictionCol("prediction")
+                .setMetricName("f1");
+                
+            // Create cross-validator
+            CrossValidator cv = new CrossValidator()
+                .setEstimator(pipeline)
+                .setEvaluator(evaluator)
+                .setEstimatorParamMaps(paramGrid)
+                .setNumFolds(3)  // Use 3-fold cross-validation
+                .setSeed(42);
+                
+            // Train model with cross-validation
+            System.out.println("Training model with cross-validation...");
+            CrossValidatorModel cvModel = cv.fit(trainingData);
+            
+            // Extract best model
+            PipelineModel bestModel = (PipelineModel) cvModel.bestModel();
             
             // Evaluate model on validation data
-            Dataset<Row> predictions = model.transform(validationData);
+            Dataset<Row> predictions = bestModel.transform(validationData);
             
-            // Evaluate model
-            MulticlassClassificationEvaluator evaluator = new MulticlassClassificationEvaluator()
-                    .setLabelCol("label")
-                    .setPredictionCol("prediction")
-                    .setMetricName("f1");
-            
+            // Calculate F1 score
             double f1 = evaluator.evaluate(predictions);
-            System.out.println("F1 score: " + f1);
+            System.out.println("F1 score on validation data: " + f1);
+            
+            // Calculate accuracy
+            evaluator.setMetricName("accuracy");
+            double accuracy = evaluator.evaluate(predictions);
+            System.out.println("Accuracy on validation data: " + accuracy);
+            
+            // Print confusion matrix
+            System.out.println("Confusion Matrix:");
+            predictions.groupBy("label", "prediction").count().orderBy("label", "prediction").show();
             
             // Save model
-            model.write().overwrite().save(modelPath);
+            bestModel.write().overwrite().save(modelPath);
             System.out.println("Model saved to: " + modelPath);
             
-        // Save F1 score using Spark
-        Dataset<String> f1Dataset = spark.createDataset(
-            java.util.Collections.singletonList(String.format("F1 score: %.6f", f1)),
-            org.apache.spark.sql.Encoders.STRING()
-        );
-        String f1OutputPath = modelPath + "_f1";
-        f1Dataset.write().mode("overwrite").text(f1OutputPath);
-        System.out.println("F1 score saved to: " + f1OutputPath);
-
+            // Save model evaluation metrics
+            String metricsOutput = String.format(
+                "F1 Score: %.4f\nAccuracy: %.4f\nBest Parameters: %s",
+                f1, accuracy, cvModel.bestModel().toString()
+            );
+            
+            Dataset<String> metricsDataset = spark.createDataset(
+                java.util.Collections.singletonList(metricsOutput),
+                org.apache.spark.sql.Encoders.STRING()
+            );
+            
+            String metricsPath = modelPath + "_metrics";
+            metricsDataset.write().mode("overwrite").text(metricsPath);
+            System.out.println("Metrics saved to: " + metricsPath);
 
         } finally {
             spark.stop();
