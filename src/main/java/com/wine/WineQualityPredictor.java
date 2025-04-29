@@ -73,6 +73,12 @@ public class WineQualityPredictor {
                         .csv(testFile);
                 
                 logAndWrite(writer, "Number of test samples: " + testData.count());
+                
+                // Create the derived feature: free_to_total_so2_ratio
+                logAndWrite(writer, "Creating derived feature: free_to_total_so2_ratio");
+                testData = testData.withColumn("free_to_total_so2_ratio", 
+                    functions.when(testData.col("total_sulfur_dioxide").equalTo(0.0), 0.0)
+                        .otherwise(testData.col("free_sulfur_dioxide").divide(testData.col("total_sulfur_dioxide"))));
                         
                 // Convert quality to label (integer)
                 testData = testData.withColumn("label", 
