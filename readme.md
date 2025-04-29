@@ -230,3 +230,13 @@ spark-submit --class com.wine.WineQualityTrainer \
   /data/spark-share/ValidationDataset.csv \
   /data/spark-share/wine-model
 ```
+
+To run the prediction job locally using manual Spark submit:
+
+```bash
+spark-submit --class com.wine.WineQualityPredictor   --master local[*]   target/wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar   /data/spark-share/wine-model   /data/spark-share/TestDataset.csv
+```
+
+To run the Prediction with Docker:
+
+
