@@ -15,10 +15,12 @@ import org.apache.spark.sql.functions;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class WineQualityPredictor {
+    // Define a constant output file name
+    private static final String OUTPUT_FILE = "prediction_results.txt";
+    
     public static void main(String[] args) {
         if (args.length < 2) {
             System.out.println("Usage: WineQualityPredictor <model-path> <test-file>");
@@ -32,13 +34,10 @@ public class WineQualityPredictor {
         String modelPath = args[0];
         String testFile = args[1];
         
-        // Create output file name with timestamp
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String outputFile = "prediction_results_" + timestamp + ".txt";
-        
-        try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
-            // Log start of execution
-            logAndWrite(writer, "Starting Wine Quality Prediction");
+        try (PrintWriter writer = new PrintWriter(new FileWriter(OUTPUT_FILE))) {
+            // Log start of execution with current time
+            String currentTime = new Date().toString();
+            logAndWrite(writer, "Starting Wine Quality Prediction at " + currentTime);
             logAndWrite(writer, "Model Path: " + modelPath);
             logAndWrite(writer, "Test File: " + testFile);
             
@@ -73,12 +72,6 @@ public class WineQualityPredictor {
                         .csv(testFile);
                 
                 logAndWrite(writer, "Number of test samples: " + testData.count());
-                
-                // Create the derived feature: free_to_total_so2_ratio
-                logAndWrite(writer, "Creating derived feature: free_to_total_so2_ratio");
-                testData = testData.withColumn("free_to_total_so2_ratio", 
-                    functions.when(testData.col("total_sulfur_dioxide").equalTo(0.0), 0.0)
-                        .otherwise(testData.col("free_sulfur_dioxide").divide(testData.col("total_sulfur_dioxide"))));
                         
                 // Convert quality to label (integer)
                 testData = testData.withColumn("label", 
@@ -170,8 +163,8 @@ public class WineQualityPredictor {
                 logAndWrite(writer, "Spark session stopped.");
             }
             
-            logAndWrite(writer, "Results saved to: " + outputFile);
-            System.out.println("Results saved to: " + outputFile);
+            logAndWrite(writer, "Results saved to: " + OUTPUT_FILE);
+            System.out.println("Results saved to: " + OUTPUT_FILE);
             
         } catch (IOException e) {
             System.err.println("Error writing to output file: " + e.getMessage());

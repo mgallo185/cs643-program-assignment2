@@ -1,8 +1,0 @@
-Starting Wine Quality Prediction
-Model Path: /data/spark-share/wine-model
-Test File: /data/spark-share/TestDataset.csv
-Loading test data from: /data/spark-share/TestDataset.csv
-Number of test samples: 160
-Loading model from: /data/spark-share/wine-model
-Making predictions...
-Spark session stopped.

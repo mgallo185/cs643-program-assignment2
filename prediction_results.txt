@@ -1,7 +1,7 @@
-Starting Wine Quality Prediction
+Starting Wine Quality Prediction at Tue Apr 29 05:05:23 UTC 2025
 Model Path: /data/spark-share/wine-model
-Test File: /data/spark-share/ValidationDataset.csv
-Loading test data from: /data/spark-share/ValidationDataset.csv
+Test File: /data/spark-share/TestDataset.csv
+Loading test data from: /data/spark-share/TestDataset.csv
 Number of test samples: 160
 Test Data Class Distribution:
 label          count          
@@ -60,4 +60,4 @@ Correct predictions: 91 out of 160 (56.88%)
 Feature Importance Analysis:
 Prediction completed successfully.
 Spark session stopped.
-Results saved to: prediction_results_20250428_233331.txt
+Results saved to: prediction_results.txt
