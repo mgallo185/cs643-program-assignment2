@@ -186,3 +186,47 @@ On each worker node:
 ls -la /data/spark-share/
 ```
 You should see the test file on all nodes.
+
+## Creating the Java Spark Project 
+
+On your master node and in the directory where the Git repo that we cloned
+``mkdir -p /src/main/java/com/wine``
+
+Inside that directory is where the src/main/java/com/wine/WineQualityPredictor.java and src/main/java/com/wine/WineQualityTrainer.java
+
+Outside of that directory you can make the pom.xml file
+
+## Building the Project and Running the Train Model Code
+This is still all done on your master node.
+
+Build the proejct using 
+
+`` mvn clean package  ``
+
+This will create a JAR file with dependencies at target/wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar.
+
+```bash
+MASTER_IP=$(hostname -i)
+sed -i "s/MASTER_IP/$MASTER_IP/g" src/main/java/com/wine/WineQualityTrainer.java
+mvn clean package
+
+#ensure data directory exists
+mkdir -p /data/spark-share/
+```
+
+To run the traning job on the cluster
+```bash
+spark-submit --class com.wine.WineQualityTrainer \
+  --master spark://$MASTER_IP:7077 \
+  --deploy-mode client \
+  --executor-memory 1g \
+  --executor-cores 1 \
+  --driver-memory 1g \
+  --conf spark.executor.memoryOverhead=256m \
+  --conf spark.network.timeout=600s \
+  --conf spark.executor.heartbeatInterval=120s \
+  target/wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar \
+  /data/spark-share/TrainingDataset.csv \
+  /data/spark-share/ValidationDataset.csv \
+  /data/spark-share/wine-model
+```
