@@ -14,7 +14,7 @@ Description: You have to build a wine quality prediction ML model in Spark over 
 3. On AWS Console search and click on the EC2 service in the All Services Menu
 4. On the EC2 Dashboard click Launch Instance
 5. Configure Instance Details
-  - Name: Give a name to your instance
+  - Name: Give a name to your instance (Master-node for the master node and worker-number for each 3 worker nodes)
   - Ubuntu Linux: Ubunutu Server 24.04
   - Instance Type: t2.medium
   - Create New Key Pair give it a name and download the .pem file and save it in a safe place on your PC. (you will only need to do this once as you will use the same Key Pair for your other instance)
@@ -40,6 +40,85 @@ Description: You have to build a wine quality prediction ML model in Spark over 
   - `ssh -i my-key-pair.pem ec2-user@your-ec2-public-ip`
   - Replace **your-ec2-public-ip** with the Public IPv4 Address of your EC2 Dashboard
   - Do This to all your instances
+
+## Setting Up the Enviroment on All Instances
+SSH into each instance and run the following commands:
+```bash
+# Update system packages
+sudo apt update && sudo apt upgrade -y
+
+# Install Java (JDK 11)
+sudo apt install openjdk-11-jdk -y
+
+# Verify Java installation
+java -version
+
+# Install Maven for Java project management
+sudo apt install maven -y
+
+# Install Docker (on the  master node instance only)
+sudo apt install docker.io -y
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker ubuntu
+```
+
+## Setting Up Apache Spark
+Run this on all instances
+
+```bash
+# Download and extract Spark
+wget https://archive.apache.org/dist/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3.tgz
+tar -xvzf spark-3.3.2-bin-hadoop3.tgz
+mv spark-3.3.2-bin-hadoop3 spark
+
+# Set environment variables
+echo "export SPARK_HOME=$HOME/spark" >> ~/.bashrc
+echo "export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin" >> ~/.bashrc
+echo "export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> ~/.bashrc
+source ~/.bashrc
+
+```
+
+##  Configure Spark Cluster
+
+### On the Master Node
+
+```bash
+# Start the master
+$SPARK_HOME/sbin/start-master.sh
+
+# Check the master UI is running
+# Access http://<public-master-node-ip>:8080 in your browser
+```
+### On the 3 worker Nodes
+```bash
+# Start worker and connect to master
+$SPARK_HOME/sbin/start-slave.sh spark://<private-master-node-ip>:7077
+```
+
+## Upload Datasets and Github Repo
+
+Use SCP to upload the datasets to the master node
+```bash
+# From your local machine
+scp -i your-key.pem TrainingDataset.csv ubuntu@<master-node-ip>:~/
+scp -i your-key.pem ValidationDataset.csv ubuntu@<master-node-ip>:~/
+```
+Setting up Github and the repo by
+1. Generate a new SSH key
+```ssh-keygen -t ed25519 -C "your_email@example.com" ```
+2.  ``` eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519 ```
+3. ``` cat ~/.ssh/id_ed25519.pub ```
+4. Copy that public key and add it to GitHub:
+
+Go to GitHub → Settings → SSH and GPG keys → New SSH key.
+
+Paste it there.
+
+5. git clone git@github.com:mgallo185/cs643-program-assignment2.git
+
 
 
 
