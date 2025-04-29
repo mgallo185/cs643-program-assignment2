@@ -239,4 +239,19 @@ spark-submit --class com.wine.WineQualityPredictor   --master local[*]   target/
 
 To run the Prediction with Docker:
 
+# Create directories for data and model
+mkdir -p $(pwd)/data
+mkdir -p $(pwd)/model
+
+# Copy test dataset
+cp /path/to/your/TestDataset.csv $(pwd)/data/
+
+# Copy your entire model directory (assuming it's trained already)
+cp -r /data/spark-share/wine-model/* $(pwd)/model/
+
+docker build -t wine-quality-predictor .
+
+# This is the critical part - mount both directories
+docker run -v $(pwd)/data:/data -v $(pwd)/model:/data/wine-model wine-quality-predictor
+
 
