@@ -27,10 +27,14 @@ COPY target/wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar /app/
 RUN mkdir -p /data
 RUN mkdir -p /data/spark-share
 
-# Command to run the prediction job
-CMD ["spark-submit", \
-     "--class", "com.wine.WineQualityPredictor", \
-     "--master", "local[*]", \
-     "wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar", \
-     "/data/wine-model", \
-     "/data/TestDataset.csv"]
+# Make sure the /data directory is writable
+RUN chmod 777 /data
+
+# Echo start and end messages to make success more obvious
+CMD ["sh", "-c", "echo '*** STARTING WINE QUALITY PREDICTION ***' && \
+     spark-submit --class com.wine.WineQualityPredictor \
+     --master local[*] \
+     wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar \
+     /data/wine-model \
+     /data/TestDataset.csv && \
+     echo '*** PREDICTION COMPLETED SUCCESSFULLY! Check /data/prediction_results.txt ***'"]

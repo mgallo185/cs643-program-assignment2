@@ -19,8 +19,7 @@ import java.util.Date;
 
 public class WineQualityPredictor {
     // Define a constant output file name
-    private static final String OUTPUT_FILE = "prediction_results.txt";
-    
+    private static final String OUTPUT_FILE = "/data/prediction_results.txt";    
     public static void main(String[] args) {
         if (args.length < 2) {
             System.out.println("Usage: WineQualityPredictor <model-path> <test-file>");
