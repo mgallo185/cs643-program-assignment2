@@ -2,12 +2,50 @@
 # Github Link: https://github.com/mgallo185/cs643-program-assignment2/
 # Dockerhub Link: https://hub.docker.com/r/mgallo185/wine-quality-predictor
 
+# Programming Assignment 2: Wine Quality Prediction Model
+
+Goal: The purpose of this individual assignment is to learn how to develop parallel machine learning (ML) applications in Amazon AWS cloud platform. Specifically, you will learn: (1) how to use Apache Spark to train an ML model in parallel on multiple EC2 instances; (2) how to use Spark’s MLlib to develop and use an ML model in the cloud; (3) How to use Docker to create a container for your ML model to simplify model deployment.
+
+Description: You have to build a wine quality prediction ML model in Spark over AWS. The model must be trained in parallel using 4 EC2 instances. Then, you need to save and load the model in a Spark application that will perform wine quality prediction; this application will run on one EC2 instance. The assignment must be implemented in Java on Ubuntu Linux. 
+
+## Set up on AWS Console
+1. Login and go to AWS Academy Learner Lab and click on Start Lab
+2. Wait for AWS to load (when the small circle turns green) and click on AWS to access AWS Console
+3. On AWS Console search and click on the EC2 service in the All Services Menu
+4. On the EC2 Dashboard click Launch Instance
+5. Configure Instance Details
+  - Name: Give a name to your instance
+  - Ubuntu Linux: Ubunutu Server 24.04
+  - Instance Type: t2.medium
+  - Create New Key Pair give it a name and download the .pem file and save it in a safe place on your PC. (you will only need to do this once as you will use the same Key Pair for your other instance)
+  - Configure Storage: 1x 16 GiB gp3
+6. Configure Instance Security Group
+   - Create a New Security Group and press the edit button
+   - Give your security group a name
+   - Allow the Necessary Ports to  Source Type **MY IP** and to Source Type **172.31.0.0/32**
+   - Allow all traffic between instances in the same security group
+   - Use the following Inbound Rules:
+     | IP Version | Type | Protocol | Port Range | Source |
+     |------------|------|----------|------------|--------|
+     | - | All Traffic | All | All | Your-Security-Group |
+     | IPv4 | SSH | TCP | 22 | Your-IP |
+    
+   - You will only need to do this once, when making your other instances, just use existing security group that you made
+
+
+## Connecting to your EC2 Instances
+1. Navigate in your terminal or Git Bash to where you downloaded the .pem file
+2. Connect using SSH:
+  - `chmod 400 my-key-pair.pem  # Set correct permissions`
+  - `ssh -i my-key-pair.pem ec2-user@your-ec2-public-ip`
+  - Replace **your-ec2-public-ip** with the Public IPv4 Address of your EC2 Dashboard
+  - Do This to all your instances
 
 
 
 EC2 Cluster Setup for Distributed Spark ML Training
 🧾 Instance Configuration
-Instance Type: t2.micro (Free-tier eligible)
+Instance Type: t2.medium
 
 AMI: Ubuntu Server 24.04 LTS (HVM), 64-bit (x86)
 
