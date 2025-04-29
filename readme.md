@@ -1,3 +1,10 @@
+
+# Github Link: https://github.com/mgallo185/cs643-program-assignment2/
+# Dockerhub Link: https://hub.docker.com/r/mgallo185/wine-quality-predictor
+
+
+
+
 EC2 Cluster Setup for Distributed Spark ML Training
 🧾 Instance Configuration
 Instance Type: t2.micro (Free-tier eligible)
