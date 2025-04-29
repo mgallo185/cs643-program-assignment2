@@ -105,151 +105,84 @@ Use SCP to upload the datasets to the master node
 scp -i your-key.pem TrainingDataset.csv ubuntu@<master-node-ip>:~/
 scp -i your-key.pem ValidationDataset.csv ubuntu@<master-node-ip>:~/
 ```
-Setting up Github and the repo by
-1. Generate a new SSH key
-```ssh-keygen -t ed25519 -C "your_email@example.com" ```
-2.  ``` eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519 ```
-3. ``` cat ~/.ssh/id_ed25519.pub ```
-4. Copy that public key and add it to GitHub:
+Setting up Github and the repo by Generating an SSH key and cloning the repo
+```bash
+ssh-keygen -t ed25519 -C "your_email@example.com" 
+```
+```bash
+  eval "$(ssh-agent -s)"
+  ssh-add ~/.ssh/id_ed25519 
+```
 
+```bash
+ cat ~/.ssh/id_ed25519.pub
+```
+Copy that public key and add it to GitHub:
 Go to GitHub → Settings → SSH and GPG keys → New SSH key.
-
 Paste it there.
 
-5. git clone git@github.com:mgallo185/cs643-program-assignment2.git
+``` git clone git@github.com:mgallo185/cs643-program-assignment2.git ```
 
+## Setting up NFS File Sharing
 
+### Setting up NFS Server on Master Node
+```bash
+# Install NFS server packages on the master node
+sudo apt update
+sudo apt install nfs-kernel-server -y
 
+# Create a directory to share
+sudo mkdir -p /data/spark-share
+sudo chown -R ubuntu:ubuntu /data/spark-share
 
-EC2 Cluster Setup for Distributed Spark ML Training
-🧾 Instance Configuration
-Instance Type: t2.medium
+# Move datasets to the shared directory
+cp ~/TrainingDataset.csv /data/spark-share/
+cp ~/ValidationDataset.csv /data/spark-share/
 
-AMI: Ubuntu Server 24.04 LTS (HVM), 64-bit (x86)
+# Make the directory accessible for all cluster nodes
+sudo bash -c 'echo "/data/spark-share *(rw,sync,no_subtree_check,no_root_squash)" >> /etc/exports'
 
-Number of Instances:
+# Apply the exports
+sudo exportfs -a
 
-4 EC2 instances for Spark cluster training (1 master, 3 workers)
+# Restart NFS server
+sudo systemctl restart nfs-kernel-server
 
-1 EC2 instance (optional) for testing the trained model (can reuse master)
+```
 
-Storage: 8 GiB (default gp3 EBS volume)
+### Set up NFS Clients on Worker Nodes
 
-Key Pair: spark-keypair.pem
+```bash
+# Install NFS client packages
+sudo apt update
+sudo apt install nfs-common -y
 
-Security Group:
+# Create mount point
+sudo mkdir -p /data/spark-share
 
-Allow inbound traffic on ports:
+# Mount the shared directory from the master
+# Replace MASTER_PRIVATE_IP with the private IP of your master node
+sudo mount MASTER_PRIVATE_IP:/data/spark-share /data/spark-share
 
-22 (SSH) — Source: your IP
+# Make the mount persist across reboots
+sudo bash -c 'echo "MASTER_PRIVATE_IP:/data/spark-share /data/spark-share nfs rw,sync,hard,intr 0 0" >> /etc/fstab'
 
-8080, 7077, 4040 — Source: your IP or cluster private subnet
+# Set correct permissions
+sudo chown -R ubuntu:ubuntu /data/spark-share
 
-Outbound: allow all (default)
+```
 
-Fix Key Permissions (First Step After Downloading Key)
-bash
-Copy
-Edit
-chmod 400 spark-keypair.pem
-🔌 SSH Into Instance
+### Verify NFS Setup
 
-1. Terminate the t2.micro & Spin Up a t2.medium
-Ubuntu 22.04 LTS AMI
+On the master node:
+```bash
+# Create a test file
+touch /data/spark-share/nfs-test-file
+```
+On each worker node:
 
-Instance type: t2.medium or better
-
-Open ports:
-
-SSH (22) from your IP
-
-Optional: Spark UI (4040)
-
-☕ 2. Install Java & Set It Up
-bash
-Copy code
-sudo apt update && sudo apt upgrade -y
-sudo apt install openjdk-21-jdk git -y
-Set environment variables:
-
-bash
-Copy code
-echo 'export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))' >> ~/.bashrc
-echo 'export PATH=$PATH:$JAVA_HOME/bin' >> ~/.bashrc
-source ~/.bashrc
-Confirm:
-
-bash
-Copy code
-java -version
-echo $JAVA_HOME
-🔧 3. Install Apache Spark
-bash
-Copy code
-wget https://dlcdn.apache.org/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz
-tar -xvzf spark-3.5.1-bin-hadoop3.tgz
-sudo mv spark-3.5.1-bin-hadoop3 /opt/spark
-Set Spark env:
-
-bash
-Copy code
-echo 'export SPARK_HOME=/opt/spark' >> ~/.bashrc
-echo 'export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin' >> ~/.bashrc
-source ~/.bashrc
-🛠️ 4. Set Up Your Java Project
-Use Maven or Gradle.
-
-Maven example:
-bash
-Copy code
-mvn archetype:generate \
-  -DgroupId=com.example.spark \
-  -DartifactId=spark-java-project \
-  -DarchetypeArtifactId=maven-archetype-quickstart \
-  -DinteractiveMode=false
-cd spark-java-project
-Add Spark dependencies to pom.xml:
-xml
-Copy code
-<dependencies>
-  <dependency>
-    <groupId>org.apache.spark</groupId>
-    <artifactId>spark-core_2.12</artifactId>
-    <version>3.5.1</version>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.spark</groupId>
-    <artifactId>spark-sql_2.12</artifactId>
-    <version>3.5.1</version>
-  </dependency>
-</dependencies>
-Build it:
-
-bash
-Copy code
-mvn clean package
-🚀 5. Run Your Java Spark App
-bash
-Copy code
-$SPARK_HOME/bin/spark-submit \
-  --class com.example.spark.App \
-  --master local[*] \
-  target/spark-java-project-1.0-SNAPSHOT.jar
-If you want, I can help you:
-
-Write a sample Java Spark job to test everything
-
-Set up IntelliJ or VS Code with remote dev
-
-Switch to Gradle if you prefer that build system
-
-What’s your next move — want help writing a Java Spark job from scratch, or you already have one you’re porting over?
-
-
-
-
-
-
-
-
+```bash
+# Check if the file is visible
+ls -la /data/spark-share/
+```
+You should see the test file on all nodes.
