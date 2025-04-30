@@ -26,6 +26,7 @@ import java.io.IOException;
 public class WineQualityTrainer {
 
     public static void main(String[] args) throws IOException {
+        // if arguments are less than 3 exit the code
         if (args.length < 3) {
             System.out.println("Usage: WineQualityTrainer <training-file> <validation-file> <model-output-path>");
             System.exit(1);
