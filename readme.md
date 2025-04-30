@@ -260,8 +260,10 @@ cp -r /data/spark-share/wine-model/* $(pwd)/model/
 ```bash
 docker build -t wine-quality-predictor .
 ```
-# This is the critical part - mount both directories
-```bash docker run -v $(pwd)/data:/data -v $(pwd)/model:/data/wine-model wine-quality-predictor
+# This is the critical part - mount both directories  and Run it with Docker
+```bash
+
+docker run -v $(pwd)/data:/data -v $(pwd)/model:/data/wine-model wine-quality-predictor
 
  ```
 
