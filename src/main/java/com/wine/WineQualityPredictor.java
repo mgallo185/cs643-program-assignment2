@@ -19,6 +19,7 @@ import java.util.Date;
 
 public class WineQualityPredictor {
     // Define a constant output file name
+    // fixed generic output to a specfied directory data on where to put prediction results
     private static final String OUTPUT_FILE = "/data/prediction_results.txt";    
     public static void main(String[] args) {
         if (args.length < 2) {
@@ -26,15 +27,17 @@ public class WineQualityPredictor {
             System.exit(1);
         }
         
-        // Set log levels to reduce noise
+        // Set log levels to reduce noise make it easier to see if my code runs
         Logger.getLogger("org").setLevel(Level.ERROR);
         Logger.getLogger("akka").setLevel(Level.ERROR);
-        
+        // Get model Path as an argument
         String modelPath = args[0];
+        // get file as an argument
         String testFile = args[1];
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(OUTPUT_FILE))) {
-            // Log start of execution with current time
+            // Log start of execution with current time 
+            // time is get to check if the output updated
             String currentTime = new Date().toString();
             logAndWrite(writer, "Starting Wine Quality Prediction at " + currentTime);
             logAndWrite(writer, "Model Path: " + modelPath);
@@ -46,7 +49,7 @@ public class WineQualityPredictor {
                     .getOrCreate();
                     
             try {
-                // Define schema for the CSV files
+                // Define schema for the CSV files these are all rows from Validation/Test Dataset
                 StructType schema = DataTypes.createStructType(new StructField[]{
                     DataTypes.createStructField("fixed_acidity", DataTypes.DoubleType, false),
                     DataTypes.createStructField("volatile_acidity", DataTypes.DoubleType, false),
