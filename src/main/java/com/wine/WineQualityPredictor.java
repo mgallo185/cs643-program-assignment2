@@ -19,9 +19,10 @@ import java.util.Date;
 
 public class WineQualityPredictor {
     // Define a constant output file name
-    // fixed generic output to a specfied directory data on where to put prediction results
+    // fixed generic output to a specfied directory data on where to put prediction results this output with a stored 
     private static final String OUTPUT_FILE = "/data/prediction_results.txt";    
     public static void main(String[] args) {
+        // if arguments is less than 2 this is an error and exit the running of code you need 2 arguments
         if (args.length < 2) {
             System.out.println("Usage: WineQualityPredictor <model-path> <test-file>");
             System.exit(1);
@@ -37,7 +38,7 @@ public class WineQualityPredictor {
         
         try (PrintWriter writer = new PrintWriter(new FileWriter(OUTPUT_FILE))) {
             // Log start of execution with current time 
-            // time is get to check if the output updated
+            // time is get to check if the output updated because its hard to know if the output changed
             String currentTime = new Date().toString();
             logAndWrite(writer, "Starting Wine Quality Prediction at " + currentTime);
             logAndWrite(writer, "Model Path: " + modelPath);
@@ -130,7 +131,7 @@ public class WineQualityPredictor {
                 );
                 logAndWrite(writer, confusionMatrix);
                 
-                // Count correct predictions
+                // Count correct predictions and the accuracy use math to get the correct and divide by the total
                 Dataset<Row> correctPredictions = predictions.filter(
                     predictions.col("prediction").equalTo(predictions.col("label")));
                 long correctCount = correctPredictions.count();
