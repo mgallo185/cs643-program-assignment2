@@ -288,7 +288,6 @@ CS643-PROGRAM-ASSIGNMENT2/
 ├── pa2.pdf         # Assignment pdf file
 ├── pom.xml         # Maven Project Configuration file
 ├── readme.md          # this file 
-├── spark-keypair.pem  # key pair
 ├── TestDataset.csv    # TestDataset which is the same as Validation
 ├── TrainingDataset.csv  # Given Dataset
 └── ValidationDataset.csv  # given dataset
