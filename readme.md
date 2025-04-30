@@ -234,24 +234,61 @@ spark-submit --class com.wine.WineQualityTrainer \
 To run the prediction job locally using manual Spark submit:
 
 ```bash
+sudo chmod 777 /data
+
 spark-submit --class com.wine.WineQualityPredictor   --master local[*]   target/wine-quality-1.0-SNAPSHOT-jar-with-dependencies.jar   /data/spark-share/wine-model   /data/spark-share/TestDataset.csv
 ```
 
 To run the Prediction with Docker:
 
 # Create directories for data and model
+```bash
 mkdir -p $(pwd)/data
 mkdir -p $(pwd)/model
+```
 
 # Copy test dataset
+```bash
 cp /path/to/your/TestDataset.csv $(pwd)/data/
+```
 
 # Copy your entire model directory (assuming it's trained already)
+```bash
 cp -r /data/spark-share/wine-model/* $(pwd)/model/
-
+ ```
+# Build the docker container
+```bash
 docker build -t wine-quality-predictor .
-
+```
 # This is the critical part - mount both directories
-docker run -v $(pwd)/data:/data -v $(pwd)/model:/data/wine-model wine-quality-predictor
+```bash docker run -v $(pwd)/data:/data -v $(pwd)/model:/data/wine-model wine-quality-predictor
+
+ ```
 
 
+# Project Directory
+
+```
+CS643-PROGRAM-ASSIGNMENT2/
+├── data/        # Data directory for the predictions code
+│   ├── prediction_results.txt
+│   └── TestDataset.csv
+├── model/        # Directory for ML Model artifact
+│   ├── metadata/
+│   └── stages/
+├── src
+|    └── /main/java/com/wine/
+│         ├── WineQualityPredictor.java # Predictor Code
+│         └── WineQualityTrainer.java # Trainer Code
+├── .gitignore     # specfies files and directories that git ignores
+├── target         # complied code but this is not on github
+├── Dockerfile      #Dockerfile 
+├── pa2.pdf         # Assignment pdf file
+├── pom.xml         # Maven Project Configuration file
+├── readme.md          # this file 
+├── spark-keypair.pem  # key pair
+├── TestDataset.csv    # TestDataset which is the same as Validation
+├── TrainingDataset.csv  # Given Dataset
+└── ValidationDataset.csv  # given dataset
+
+```
