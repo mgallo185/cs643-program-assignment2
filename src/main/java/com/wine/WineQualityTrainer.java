@@ -30,10 +30,10 @@ public class WineQualityTrainer {
             System.out.println("Usage: WineQualityTrainer <training-file> <validation-file> <model-output-path>");
             System.exit(1);
         }
-        
+        // put loggers for errorz
         Logger.getLogger("org").setLevel(Level.ERROR);
         Logger.getLogger("akka").setLevel(Level.ERROR);
-
+        // Get training file, validation file and the model path
         String trainingFile = args[0];
         String validationFile = args[1];
         String modelPath = args[2];
@@ -81,6 +81,8 @@ public class WineQualityTrainer {
                 validationData.col("quality").cast(DataTypes.IntegerType));
             
             // Print class distribution to understand data imbalance
+
+            // organizes training data and validation data
             System.out.println("Training Data Class Distribution:");
             trainingData.groupBy("label").count().orderBy("label").show();
             System.out.println("Validation Data Class Distribution:");
@@ -175,7 +177,7 @@ public class WineQualityTrainer {
                 java.util.Collections.singletonList(metricsOutput),
                 org.apache.spark.sql.Encoders.STRING()
             );
-            
+            //saves it in and overwrites a text file
             String metricsPath = modelPath + "_metrics";
             metricsDataset.write().mode("overwrite").text(metricsPath);
             System.out.println("Metrics saved to: " + metricsPath);
