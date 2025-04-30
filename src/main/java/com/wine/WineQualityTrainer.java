@@ -30,7 +30,7 @@ public class WineQualityTrainer {
             System.out.println("Usage: WineQualityTrainer <training-file> <validation-file> <model-output-path>");
             System.exit(1);
         }
-        // put loggers for errorz
+        // put loggers for errors
         Logger.getLogger("org").setLevel(Level.ERROR);
         Logger.getLogger("akka").setLevel(Level.ERROR);
         // Get training file, validation file and the model path
@@ -74,7 +74,7 @@ public class WineQualityTrainer {
                     .schema(schema)
                     .csv(validationFile);
                     
-            // Convert quality to label (integer)
+            // Convert quality to label 
             trainingData = trainingData.withColumn("label", 
                 trainingData.col("quality").cast(DataTypes.IntegerType));
             validationData = validationData.withColumn("label", 
@@ -88,7 +88,7 @@ public class WineQualityTrainer {
             System.out.println("Validation Data Class Distribution:");
             validationData.groupBy("label").count().orderBy("label").show();
             
-            // Define feature columns
+            // Define all of the columns
             String[] featureCols = {
                 "fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar",
                 "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density",
@@ -108,6 +108,8 @@ public class WineQualityTrainer {
                 .setWithMean(true);
                 
             // Try Random Forest classifier (better for imbalanced data)
+            // Orgiinally used Logisitic but this gave a higher f1 value
+            
             RandomForestClassifier rf = new RandomForestClassifier()
                 .setLabelCol("label")
                 .setFeaturesCol("features")
@@ -117,7 +119,7 @@ public class WineQualityTrainer {
                 .setSeed(42)
                 .setImpurity("gini");
             
-            // Create pipeline
+        
             Pipeline pipeline = new Pipeline().setStages(new PipelineStage[] {assembler, scaler, rf});
             
             // Create parameter grid for hyperparameter tuning
@@ -144,7 +146,7 @@ public class WineQualityTrainer {
             System.out.println("Training model with cross-validation...");
             CrossValidatorModel cvModel = cv.fit(trainingData);
             
-            // Extract best model
+            
             PipelineModel bestModel = (PipelineModel) cvModel.bestModel();
             
             // Evaluate model on validation data
@@ -163,7 +165,7 @@ public class WineQualityTrainer {
             System.out.println("Confusion Matrix:");
             predictions.groupBy("label", "prediction").count().orderBy("label", "prediction").show();
             
-            // Save model
+            // Save model to the path
             bestModel.write().overwrite().save(modelPath);
             System.out.println("Model saved to: " + modelPath);
             
